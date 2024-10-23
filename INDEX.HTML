@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMEI Barcode Scanner</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+
+        #video {
+            width: 100%;
+            max-width: 600px;
+            border: 1px solid black;
+            margin-bottom: 20px;
+        }
+
+        #result {
+            font-size: 1.5rem;
+            color: green;
+            margin-top: 20px;
+        }
+
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Scan IMEI Code</h1>
+    <p>Hold the IMEI barcode in front of the camera</p>
+    <video id="video" autoplay playsinline></video>
+    <p id="result"></p>
+    <p id="error" class="error"></p>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <script>
+        const videoElement = document.getElementById('video');
+        const resultElement = document.getElementById('result');
+        const errorElement = document.getElementById('error');
+
+        // Initialize camera to use the front camera (user-facing)
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user' } // Use front camera for your Mac
+                });
+                videoElement.srcObject = stream;
+                videoElement.addEventListener('loadeddata', function () {
+                    console.log('Camera feed loaded');
+                    startScanner(); // Start scanning after video is loaded
+                });
+            } catch (err) {
+                errorElement.innerText = 'Error accessing camera: ' + err.message;
+                console.error('Error accessing camera: ', err);
+            }
+        }
+
+        // Initialize QuaggaJS and start scanning
+        function startScanner() {
+            Quagga.init(
+                {
+                    inputStream: {
+                        name: 'Live',
+                        type: 'LiveStream',
+                        target: videoElement, // Video element for live stream
+                        constraints: {
+                            width: 1280, // Higher resolution for better detection
+                            height: 720,
+                            facingMode: 'user' // Use front camera
+                        }
+                    },
+                    decoder: {
+                        readers: [
+                            'code_128_reader', // Code 128
+                            'ean_reader',      // EAN-13
+                            'upc_reader',      // UPC-A
+                            'code_39_reader',  // Code 39
+                            'code_93_reader',  // Code 93
+                            'ean_8_reader',    // EAN-8
+                            'upc_e_reader',    // UPC-E
+                            'i2of5_reader'     // Interleaved 2 of 5
+                        ]
+                    },
+                    locator: {
+                        halfSample: false, // Use full resolution for larger barcodes
+                        patchSize: 'large', // 'x-small', 'small', 'medium', 'large'
+                        debug: {
+                            showCanvas: true,         // Show canvas for debugging
+                            showPatches: true,        // Show patches being analyzed
+                            showFoundPatches: true,   // Show found patches
+                            showSkeleton: true,       // Show skeleton of detected patches
+                            showLabels: true,         // Show labels on patches
+                            showPatchLabels: true,    // Show patch labels
+                            showRemainingPatchLabels: true,
+                            boxFromPatches: {
+                                showTransformed: true,  // Show transformed box from patches
+                                showTransformedBox: true,
+                                showBB: true            // Show bounding box of detected barcode
+                            }
+                        }
+                    }
+                },
+                function (err) {
+                    if (err) {
+                        errorElement.innerText = 'Error initializing scanner: ' + err.message;
+                        console.error('Error initializing Quagga: ', err);
+                        return;
+                    }
+                    console.log('Quagga initialized');
+                    Quagga.start();
+                }
+            );
+
+            // Detect and display barcode
+            Quagga.onDetected(function (data) {
+                const code = data.codeResult.code;
+                resultElement.innerText = 'IMEI Code: ' + code;
+                console.log('Detected IMEI code:', code);
+
+                // Optionally stop scanning after detection
+                Quagga.stop();
+            });
+        }
+
+        // Start the camera and the scanner
+        document.addEventListener('DOMContentLoaded', () => {
+            initCamera();
+        });
+    </script>
+</body>
+
+</html>
