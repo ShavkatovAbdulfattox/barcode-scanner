@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,25 +11,57 @@
       text-align: center;
       padding: 20px;
     }
+
     #imageInput {
       margin-bottom: 20px;
     }
+
     #output {
       margin-top: 20px;
       font-size: 1.2rem;
       color: green;
     }
+
+    #loader {
+      margin-top: 20px;
+      font-size: 1.5rem;
+      color: blue;
+      display: none;
+      /* Initially hidden */
+    }
+
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border-left-color: #09f;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
   </style>
 </head>
+
 <body>
   <h1>Extract iPhone Info from Box</h1>
   <input type="file" id="imageInput" accept="image/*">
+  <div id="loader">
+    <div class="spinner"></div>
+    <p>Processing the image...</p>
+  </div>
   <div id="output"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
   <script>
     const imageInput = document.getElementById('imageInput');
     const outputDiv = document.getElementById('output');
+    const loaderDiv = document.getElementById('loader');
 
     imageInput.addEventListener('change', async function (event) {
       const file = event.target.files[0];
@@ -39,27 +72,56 @@
           img.src = e.target.result;
 
           img.onload = async function () {
-            // Using Tesseract to extract text from the entire image
-            const result = await Tesseract.recognize(img, 'eng', {
-              logger: (m) => console.log(m) // Log progress
-            });
+            // Show the loader before starting the OCR process
+            loaderDiv.style.display = 'block';
+            outputDiv.innerHTML = ''; // Clear previous output
 
-            const extractedText = result.data.text;
-            console.log('Extracted Text:', extractedText);
+            // Resize image for faster OCR
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const MAX_WIDTH = 1000; // Resize image to a width of 1000px
+            let width = img.width;
+            let height = img.height;
 
-            // Find the relevant info in the extracted text
-            const nameMatch = extractedText.match(/iPhone\s[\w\s]+\s\w+/i);
-            const imeiMatch = extractedText.match(/IMEI\/MEID\s\d+/i);
-            const colorMatch = extractedText.match(/Desert\s\w+/i);
-            const storageMatch = extractedText.match(/\d+GB/);
+            if (width > MAX_WIDTH) {
+              height = Math.floor((height * MAX_WIDTH) / width);
+              width = MAX_WIDTH;
+            }
 
-            // Display extracted information
-            outputDiv.innerHTML = `
-              <p><strong>Name:</strong> ${nameMatch ? nameMatch[0] : 'Not Found'}</p>
-              <p><strong>IMEI:</strong> ${imeiMatch ? imeiMatch[0] : 'Not Found'}</p>
-              <p><strong>Color:</strong> ${colorMatch ? colorMatch[0] : 'Not Found'}</p>
-              <p><strong>Storage:</strong> ${storageMatch ? storageMatch[0] : 'Not Found'}</p>
-            `;
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+
+            try {
+              console.log("Starting OCR...");
+              // Using Tesseract to extract text from the resized image
+              const result = await Tesseract.recognize(canvas, 'eng', {
+                logger: (m) => console.log(m) // Log progress
+              });
+
+              const extractedText = result.data.text;
+              console.log('Extracted Text:', extractedText);
+
+              // Find the relevant info in the extracted text
+              const nameMatch = extractedText.match(/iPhone\s[\w\s]+\s\w+/i);
+              const imeiMatch = extractedText.match(/IMEI\/MEID\s\d+/i);
+              const colorMatch = extractedText.match(/Desert\s\w+/i);
+              const storageMatch = extractedText.match(/\d+GB/);
+
+              // Display extracted information
+              outputDiv.innerHTML = `
+                <p><strong>Name:</strong> ${nameMatch ? nameMatch[0] : 'Not Found'}</p>
+                <p><strong>IMEI:</strong> ${imeiMatch ? imeiMatch[0] : 'Not Found'}</p>
+                <p><strong>Color:</strong> ${colorMatch ? colorMatch[0] : 'Not Found'}</p>
+                <p><strong>Storage:</strong> ${storageMatch ? storageMatch[0] : 'Not Found'}</p>
+              `;
+            } catch (error) {
+              console.error('Error during OCR:', error);
+              outputDiv.innerHTML = `<p class="error">Error processing the image. Please try again.</p>`;
+            } finally {
+              // Hide the loader after the OCR process is complete
+              loaderDiv.style.display = 'none';
+            }
           };
         };
         reader.readAsDataURL(file);
@@ -67,4 +129,5 @@
     });
   </script>
 </body>
+
 </html>
