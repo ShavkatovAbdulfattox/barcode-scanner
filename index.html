@@ -1,5 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scan iPhone Box</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #video {
+      width: 100%;
+      max-width: 600px;
+      border: 1px solid black;
+      margin-bottom: 20px;
+    }
+
+    #result {
+      font-size: 1.5rem;
+      color: green;
+      margin-top: 20px;
+    }
+
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Scan iPhone Box</h1>
+  <p>Hold the iPhone box in front of the camera</p>
+  <video id="video" autoplay playsinline></video>
+  <p id="result"></p>
+  <p id="error" class="error"></p>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+  <script>
+    const videoElement = document.getElementById('video');
+    const resultElement = document.getElementById('result');
+    const errorElement = document.getElementById('error');
+
+    // Initialize camera
+    async function initCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user' }
+        });
+        videoElement.srcObject = stream;
+      } catch (err) {
+        errorElement.innerText = 'Error accessing camera: ' + err.message;
+        console.error('Error accessing camera: ', err);
+      }
+    }
+
+    // OCR Function to extract text
+    async function extractTextFromImage(imageElement) {
+      const result = await Tesseract.recognize(
+        imageElement,
+        'eng', // Language
+        {
+          logger: (m) => console.log(m), // Log OCR progress
+        }
+      );
+      return result.data.text;
+    }
+
+    // Start scanning
+    document.addEventListener('DOMContentLoaded', () => {
+      initCamera();
+
+      // Example: Trigger OCR on a static image (you'd use a canvas snapshot of the video feed instead)
+      document.getElementById('video').addEventListener('loadeddata', async () => {
+        // For demo purposes: assuming there's an image element somewhere
+        const sampleImage = document.getElementById('video'); // Video snapshot or image
+        const text = await extractTextFromImage(sampleImage);
+        console.log("Detected text:", text);
+
+        // Process and display the extracted text (for storage, color, region)
+        resultElement.innerText = text;
+      });
+    });
+  </script>
+</body>
+
+</html>
+
+
+
+
+
+
+<!-- <!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -129,4 +226,4 @@
     });
   </script>
 </body>
-</html>
+</html> -->
